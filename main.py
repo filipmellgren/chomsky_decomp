@@ -2,6 +2,9 @@
 
 # Main logic for the project, from here, everything building the project will be called upon.
 
+# Load data and store more conveniently
+from src.data_creation import c0_parse_data
+
 # Prepare data
 
 # Export data
@@ -9,3 +12,4 @@
 # Create output from exported data
 
 # Compile paper/presentation using new output
+

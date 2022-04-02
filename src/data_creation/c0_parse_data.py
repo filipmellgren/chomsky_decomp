@@ -6,6 +6,15 @@ Created on Fri Apr 01
 
 The idea is to develop a test environment where we loop over a small list of year months locally, and then loop over the whole list on a different machine. From that machine, we can then export tidy data, and ignore build conditional on observing a tidy data file.
 """
+
+# TODOS:
+# 1. Handle case where an article has several location attributes (if these exist, think they do)
+# 2. Learn why there are countries such as Great Britain and France in the output file even as I only consider Sweden and Thailand
+# 3. Why are there so few observations? Is it because I so far only considered 3 (or 2) years and 3 months?
+# 4. Loop over all years and months. Do this on a different machine as it will take longish time.
+# 5. Add more features.
+# 6. Structure up the code logic a bit
+
 # Packages used:
 
 import tarfile
@@ -20,47 +29,43 @@ PATH = os.getcwd() + '/data/'
 
 RAW = 'raw/nyt_corpus/data/'
 
-YEAR = '2007/'
-
-MONTH = '01'
-
 DEST = 'extracted/'
 
-YEARS = ["2006", "2007"] # Change this to include all years when building main data set
+def read_params(param_path):
+	f = open(param_path, "r")
+	params = f.read().split(', ')
+	f.close()
+	return(params)
 
-MONTHS = ["01"] # Change this to include all months when building main data set
+countries = read_params("parameters/countries.csv")
+years = read_params("parameters/years_lite.csv")
+months = read_params("parameters/months_lite.csv")
+year_months = itertools.product(years, months)
 
-year_months = itertools.product(YEARS, MONTHS)
-
-# Extract content from compressed TGZ file. Each TGZ file represents a month with the news article from each day in that month #################
+# Extract content from compressed TGZ file. Each TGZ file represents a month with the news article from each day in that month 
 
 def extract_tarfile(path, dest, raw, year, month):
 	# Extract file if it has not already been extracted.
 	# Write to path/dest/year
 
 	if not os.path.exists(path + dest + year + "/" + month):
-	  file = tarfile.open(path + raw + year + "/" + month + '.tgz')
-	  file.extractall(path + dest + year + "/")
-	  file.close()
+		if os.path.exists(path + raw + year + "/" + month + '.tgz'):
+			file = tarfile.open(path + raw + year + "/" + month + '.tgz')
+			file.extractall(path + dest + year + "/")
+			file.close()
 
 for ym in year_months:
 	# Loop over cartesian product of years and months to extract TGZ files one by one.
     extract_tarfile(PATH, DEST, RAW, ym[0], ym[1])
 
-# Read sample article from extracted material #################
-# TODO: the next steps are
-# 	Open extracted files
-#		Read them and look for country against a list
-#			Country can be found by soup_location = soup.find_all("location"), then it is stored in soup_location.string
-# 	If the *.string matches against the list, save file to different directory.
-#		From the saved files in the different directory, open them and create features needed for analysis.
-#			NOTE: we can skip this step and go directly to creating features, and storing those into an analysis file.
+# Obtain a list of datapaths to extracted files
+datapaths = []
 
-# Reading the data inside the xml file to a variable under the name data
-DATAPATH = PATH + 'extracted/' + YEAR + MONTH + '/03/1816067.xml' # Make this as a list from which I read
-DATAPATH2 = PATH + 'extracted/' + YEAR + MONTH + '/03/1816068.xml'
-
-COUNTRIES = ['Thailand']
+for root, dirs, files in os.walk(PATH + 'extracted/'):
+	for file in files:
+		if file.endswith(".xml"):
+			datapaths.append(root + "/" + file)
+			#print(os.path.join(root, file))
 
 def article_to_datarow(path_to_article, relevant_countries_list):
 	# High level function that reads an article, 
@@ -128,13 +133,10 @@ def build_features(bs_data):
 	#print(observation)
 	return(observation)
 
-
-# TODO: loop over datapaths to all articles and build up the obs_dict_list
-DATAPATHS = [DATAPATH, DATAPATH2, DATAPATH]
 obs_dict_list = []
 
-for datapath in DATAPATHS:
-	obs_dict = article_to_datarow(datapath, COUNTRIES)
+for datapath in datapaths:
+	obs_dict = article_to_datarow(datapath, countries)
 	if bool(obs_dict):
 		obs_dict_list.append(obs_dict)
 		

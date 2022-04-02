@@ -23,49 +23,66 @@ from bs4 import BeautifulSoup
 import itertools
 import csv
 
-os.chdir(os.getcwd() + '/../..') # Discomment when building in Sublime
+#os.chdir(os.getcwd() + '/../..') # Discomment when building in Sublime
 
-PATH = os.getcwd() + '/data/'
+def parse_data():
+	# Main logic for parsing data. 
+	# Read from file key arguments re what countries and years to extract from .tgz files.
+	# From extracted .tgz files, locate countires that we care about inside articles.
+	# For articles with country we care about, save key attributes about the article and store in a list.
+	# Finally, write the list to a .csv file that will be used to analyze the data.
+	PATH = os.getcwd() + '/data/'
+	RAW = 'raw/nyt_corpus/data/'
+	DEST = 'extracted/'
+	
+	countries = read_params("parameters/countries.csv")
+	years = read_params("parameters/years_lite.csv")
+	months = read_params("parameters/months_lite.csv")
+	
+	year_months = itertools.product(years, months)
 
-RAW = 'raw/nyt_corpus/data/'
+	# Extract content from compressed TGZ file. Each TGZ file represents a month with the news article from each day in that month 
 
-DEST = 'extracted/'
+	for ym in year_months:
+		# Loop over cartesian product of years and months to extract TGZ files one by one.
+		if not os.path.exists(PATH + DEST + ym[0] + "/" + ym[1]):
+			# Only extract if destination file does not yet exist
+			extract_tarfile(PATH, RAW, ym[0], ym[1])
+
+	# Obtain a list of datapaths to extracted files
+	datapaths = []
+
+	for root, dirs, files in os.walk(PATH + 'extracted/'):
+		for file in files:
+			if file.endswith(".xml"):
+				datapaths.append(root + "/" + file)
+				#print(os.path.join(root, file))
+
+	obs_dict_list = []
+	
+	for datapath in datapaths:
+		obs_dict = article_to_datarow(datapath, countries)
+		if bool(obs_dict):
+			obs_dict_list.append(obs_dict)
+
+	write_to_file = "data/analysis/test.csv"
+	write_list_to_table(obs_dict_list, write_to_file)
+	return
 
 def read_params(param_path):
+	# Utility function to read parameter files
 	f = open(param_path, "r")
 	params = f.read().split(', ')
 	f.close()
 	return(params)
 
-countries = read_params("parameters/countries.csv")
-years = read_params("parameters/years_lite.csv")
-months = read_params("parameters/months_lite.csv")
-year_months = itertools.product(years, months)
-
-# Extract content from compressed TGZ file. Each TGZ file represents a month with the news article from each day in that month 
-
-def extract_tarfile(path, dest, raw, year, month):
-	# Extract file if it has not already been extracted.
+def extract_tarfile(path, raw, year, month):
+	# Extract file if it exists
 	# Write to path/dest/year
-
-	if not os.path.exists(path + dest + year + "/" + month):
-		if os.path.exists(path + raw + year + "/" + month + '.tgz'):
-			file = tarfile.open(path + raw + year + "/" + month + '.tgz')
-			file.extractall(path + dest + year + "/")
-			file.close()
-
-for ym in year_months:
-	# Loop over cartesian product of years and months to extract TGZ files one by one.
-    extract_tarfile(PATH, DEST, RAW, ym[0], ym[1])
-
-# Obtain a list of datapaths to extracted files
-datapaths = []
-
-for root, dirs, files in os.walk(PATH + 'extracted/'):
-	for file in files:
-		if file.endswith(".xml"):
-			datapaths.append(root + "/" + file)
-			#print(os.path.join(root, file))
+	if os.path.exists(path + raw + year + "/" + month + '.tgz'):
+		file = tarfile.open(path + raw + year + "/" + month + '.tgz')
+		file.extractall(path + dest + year + "/")
+		file.close()
 
 def article_to_datarow(path_to_article, relevant_countries_list):
 	# High level function that reads an article, 
@@ -73,22 +90,22 @@ def article_to_datarow(path_to_article, relevant_countries_list):
 	# If the location is relevant, it builds features for the article
 	with open(path_to_article, 'r') as f:
 		data = f.read()
+		f.close()
 
-	bs_data = BeautifulSoup(data, "xml")
+	bs_article = BeautifulSoup(data, "xml")
 	# print(bs_data.prettify)
 
-	bs_location = bs_data.find_all("location")
+	bs_location = bs_article.find_all("location")
 
 	if not relevant_location(bs_location, relevant_countries_list):
-		f.close()
 		return # Return nothing in this case
 	
-	data = build_features(bs_data)
+	datarow = build_features(bs_article)
 
-	return data
+	return datarow
 
 def relevant_location(article_locations, relevant_countries_list):
-	# Determines whether location is relevant
+	# Determines whether the location attribute of an article is relevant to our use case
 	
 	locations = []
 
@@ -100,7 +117,8 @@ def relevant_location(article_locations, relevant_countries_list):
 		return False
 	return True
  
-def build_features(bs_data):
+def build_features(bs_article):
+	# Main method for creating features that we care about from opened articles.
 	# TODO: cannot handle when there are several locations
 	# TODO: Discuss what set of features we want
 	# TODO: important, we may want to classify articles based on content type. How to do that?
@@ -108,12 +126,12 @@ def build_features(bs_data):
 	#print(bs_data.prettify)
 	
 	# Article id
-	id_str = bs_data.find("doc-id").get("id-string")
+	id_str = bs_article.find("doc-id").get("id-string")
 	# Country	
-	loc = bs_data.find("location").string
+	loc = bs_article.find("location").string
 	
 	# Date
-	pubdata = bs_data.find(name="pubdata")
+	pubdata = bs_article.find(name="pubdata")
 	date = pubdata.get("date.publication")
 
 	# Word count
@@ -131,25 +149,14 @@ def build_features(bs_data):
 		"length_measure": length_measure
 	}
 	#print(observation)
-	return(observation)
-
-obs_dict_list = []
-
-for datapath in datapaths:
-	obs_dict = article_to_datarow(datapath, countries)
-	if bool(obs_dict):
-		obs_dict_list.append(obs_dict)
-		
+	return(observation)		
 
 def write_list_to_table(obs_list, write_to_file):
-	field_names= ['id', 'location', 'date', "length", "length_measure"]
+	field_names= ['id', 'location', 'date', "length", "length_measure"] # TODO: make these names depend on the features in order to not hardcode them here
 
 	with open(write_to_file, 'w') as csvfile:
 		writer = csv.DictWriter(csvfile, fieldnames=field_names)
 		writer.writeheader()
 		writer.writerows(obs_list)
+		csvfile.close()
 	return
-
-WRITE_TO_FILE = "data/analysis/test.csv"
-write_list_to_table(obs_dict_list, WRITE_TO_FILE)
-

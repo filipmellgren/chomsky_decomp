@@ -8,12 +8,8 @@ The idea is to develop a test environment where we loop over a small list of yea
 """
 
 # TODOS:
-# 1. Handle case where an article has several location attributes (if these exist, think they do)
-# 2. Learn why there are countries such as Great Britain and France in the output file even as I only consider Sweden and Thailand
-# 3. Why are there so few observations? Is it because I so far only considered 3 (or 2) years and 3 months?
-# 4. Loop over all years and months. Do this on a different machine as it will take longish time.
-# 5. Add more features.
-# 6. Structure up the code logic a bit
+# 1. Loop over all years and months. Do this on a different machine as it will take longish time.
+# 2. Add more features.
 
 # Packages used:
 
@@ -47,7 +43,7 @@ def parse_data():
 		# Loop over cartesian product of years and months to extract TGZ files one by one.
 		if not os.path.exists(PATH + DEST + ym[0] + "/" + ym[1]):
 			# Only extract if destination file does not yet exist
-			extract_tarfile(PATH, RAW, ym[0], ym[1])
+			extract_tarfile(PATH, DEST, RAW, ym[0], ym[1])
 
 	# Obtain a list of datapaths to extracted files
 	datapaths = []
@@ -76,7 +72,7 @@ def read_params(param_path):
 	f.close()
 	return(params)
 
-def extract_tarfile(path, raw, year, month):
+def extract_tarfile(path, dest, raw, year, month):
 	# Extract file if it exists
 	# Write to path/dest/year
 	if os.path.exists(path + raw + year + "/" + month + '.tgz'):
@@ -93,13 +89,12 @@ def article_to_datarow(path_to_article, relevant_countries_list):
 		f.close()
 
 	bs_article = BeautifulSoup(data, "xml")
-	# print(bs_data.prettify)
+	
 
 	bs_location = bs_article.find_all("location")
 
 	if not relevant_location(bs_location, relevant_countries_list):
 		return # Return nothing in this case
-	
 	datarow = build_features(bs_article)
 
 	return datarow
@@ -119,7 +114,7 @@ def relevant_location(article_locations, relevant_countries_list):
  
 def build_features(bs_article):
 	# Main method for creating features that we care about from opened articles.
-	# TODO: cannot handle when there are several locations
+	# TODO: Make several location feature nicer by not looping and startin with "-".
 	# TODO: Discuss what set of features we want
 	# TODO: important, we may want to classify articles based on content type. How to do that?
 		# There are a bunch of potentially relevant tags we may want to explore first
@@ -128,8 +123,11 @@ def build_features(bs_article):
 	# Article id
 	id_str = bs_article.find("doc-id").get("id-string")
 	# Country	
-	loc = bs_article.find("location").string
-	
+	locations = bs_article.find_all("location")
+	locs = ""
+	for loc in bs_article.find_all("location"):
+		locs = locs + "-" + loc.string
+
 	# Date
 	pubdata = bs_article.find(name="pubdata")
 	date = pubdata.get("date.publication")
@@ -143,12 +141,14 @@ def build_features(bs_article):
 	# Bunch together features
 	observation = {
 		"id": id_str,
-		"location" : loc,
+		"location" : locs,
 		"date": date,
 		"length": length,
 		"length_measure": length_measure
 	}
 	#print(observation)
+	#print(bs_article) ## Prints the .xml
+
 	return(observation)		
 
 def write_list_to_table(obs_list, write_to_file):

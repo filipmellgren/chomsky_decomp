@@ -13,3 +13,4 @@ if not os.path.exists(os.getcwd() + '/data/analysis/test.csv'):
 
 # Compile paper/presentation using new output
 
+print("DONE!")

@@ -3,3 +3,8 @@
 
 # Ignore data
 data/
+
+# Latex files
+*.aux
+*.log
+*.synctex.gz

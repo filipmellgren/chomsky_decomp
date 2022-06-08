@@ -8,3 +8,7 @@ data/
 *.aux
 *.log
 *.synctex.gz
+
+# R
+.Rproj.user
+*.Rproj

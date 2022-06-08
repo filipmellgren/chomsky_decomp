@@ -45,24 +45,38 @@ def parse_data():
 			# Only extract if destination file does not yet exist
 			extract_tarfile(PATH, DEST, RAW, ym[0], ym[1])
 
-	# Obtain a list of datapaths to extracted files
+	# Obtain a list of datapaths to extracted files.
 	datapaths = []
 
-	for root, dirs, files in os.walk(PATH + 'extracted/'):
-		for file in files:
-			if file.endswith(".xml"):
-				datapaths.append(root + "/" + file)
-				#print(os.path.join(root, file))
+	if os.path.exists("data/paths.txt"): # If a path to files has already been created
+		path_file = open("data/paths.txt", "r")
+		datapaths = path_file.read().split(",")
+		path_file.close()
+
+
+	else: # Otherwise go through all files and create the file of paths to relevant data
+		for root, dirs, files in os.walk(PATH + 'extracted/'):
+			for file in files:
+				if file.endswith(".xml"):
+					datapaths.append(root + "/" + file)
+					#print(os.path.join(root, file))
 
 	obs_dict_list = []
+	useful_datapaths = []
 	
 	for datapath in datapaths:
 		obs_dict = article_to_datarow(datapath, countries)
 		if bool(obs_dict):
 			obs_dict_list.append(obs_dict)
+			useful_datapaths.append(datapath)
 
 	write_to_file = "data/analysis/test.csv"
 	write_list_to_table(obs_dict_list, write_to_file)
+
+	with open("data/paths.txt", "w") as f:
+		f.write(','.join(useful_datapaths))
+	f.close()
+
 	return
 
 def read_params(param_path):
@@ -119,7 +133,8 @@ def build_features(bs_article):
 	# TODO: important, we may want to classify articles based on content type. How to do that?
 		# There are a bunch of potentially relevant tags we may want to explore first
 	#print(bs_data.prettify)
-	
+
+	#print(bs_article.prettify)
 	# Article id
 	id_str = bs_article.find("doc-id").get("id-string")
 	# Country	
@@ -136,24 +151,37 @@ def build_features(bs_article):
 	length = pubdata.get("item-length")
 	length_measure = pubdata.get("unit-of-measure")
 
+	# Title 
+	title = bs_article.title.string
+
+	# Meta data
+	meta = bs_article.find_all('meta')
+
+	# Add to dict
+	observation = {}
+
+	for m in meta:
+		observation[m.get("name")] = m.get("content")
+
+	#observation = dict(zip(meta.get("name"), meta.get("content")))
+
+	observation["id"] = id_str
+	observation["location"] = locs
+	observation["date"] = date
+	observation["length"] = length
+	observation["length_measure"] = length_measure
+
+
 	# Other complex features
 	# TODO: add stuff here that we want to look at. 
 	# Bunch together features
-	observation = {
-		"id": id_str,
-		"location" : locs,
-		"date": date,
-		"length": length,
-		"length_measure": length_measure
-	}
-	#print(observation)
 	#print(bs_article) ## Prints the .xml
 
 	return(observation)		
 
 def write_list_to_table(obs_list, write_to_file):
-	field_names= ['id', 'location', 'date', "length", "length_measure"] # TODO: make these names depend on the features in order to not hardcode them here
 
+	field_names = [*obs_list[0]]
 	with open(write_to_file, 'w') as csvfile:
 		writer = csv.DictWriter(csvfile, fieldnames=field_names)
 		writer.writeheader()

@@ -4,6 +4,9 @@
 # Ignore data
 data/
 
+# Ignore plots
+output/plots
+
 # Latex files
 *.aux
 *.log

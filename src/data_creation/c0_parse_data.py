@@ -98,7 +98,7 @@ def article_to_datarow(path_to_article, relevant_countries_list):
 	# High level function that reads an article, 
 	# Determines whether the location is relevant
 	# If the location is relevant, it builds features for the article
-	with open(path_to_article, 'r') as f:
+	with open(path_to_article, 'r', encoding="utf8") as f:
 		data = f.read()
 		f.close()
 

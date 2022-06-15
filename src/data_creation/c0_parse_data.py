@@ -17,9 +17,11 @@ import tarfile
 import os
 from bs4 import BeautifulSoup
 import itertools
+from itertools import repeat
 import csv
-
-#os.chdir(os.getcwd() + '/../..') # Discomment when building in Sublime
+from multiprocessing import Pool, cpu_count
+from functools import partial
+import ipdb
 
 def parse_data():
 	# Main logic for parsing data. 
@@ -48,13 +50,19 @@ def parse_data():
 	# Obtain a list of datapaths to extracted files.
 	datapaths = []
 
-	if os.path.exists("data/paths.txt"): # If a path to files has already been created
-		path_file = open("data/paths.txt", "r")
+	pathindex_file = "data/index/" +str(min(years)) + "_" + str(max(years)) +".csv" # TODO: not perfect indicator, lacks month
+
+	# TODO: check from an index containing path and a countrylist
+	if os.path.exists(pathindex_file): # If a path to files has already been created
+		path_file = open(pathindex_file, "r")
+		with open(pathindex_file, newline='') as csvfile:
+			datapaths = csv.reader(csvfile, delimiter=',')
+
 		datapaths = path_file.read().split(",")
+		print(datapaths) # TODO: filter away those with irrelevant locations
 		path_file.close()
 
-
-	else: # Otherwise go through all files and create the file of paths to relevant data
+	else: # Otherwise go through all files
 		for root, dirs, files in os.walk(PATH + 'extracted/'):
 			for file in files:
 				if file.endswith(".xml"):
@@ -62,20 +70,21 @@ def parse_data():
 					#print(os.path.join(root, file))
 
 	obs_dict_list = []
-	useful_datapaths = []
 	
-	for datapath in datapaths:
-		obs_dict = article_to_datarow(datapath, countries)
-		if bool(obs_dict):
-			obs_dict_list.append(obs_dict)
-			useful_datapaths.append(datapath)
+	# Parallel processing over datapaths
+	pool = Pool(cpu_count()-1)
+	obs_dict_list = pool.starmap(article_to_datarow, zip(datapaths, repeat(countries)))
+
+	datarows = [d['datarow'] for d in obs_dict_list]
+	# Filter away None entries
+	datarows = list(filter(None, datarows))
+
+	if not os.path.exists(pathindex_file):
+		path_indices = [d['pathindex'] for d in obs_dict_list]
+		write_list_to_table(path_indices, pathindex_file)
 
 	write_to_file = "data/analysis/test.csv"
-	write_list_to_table(obs_dict_list, write_to_file)
-
-	with open("data/paths.txt", "w") as f:
-		f.write(','.join(useful_datapaths))
-	f.close()
+	write_dict_to_table(datarows, write_to_file)
 
 	return
 
@@ -94,32 +103,43 @@ def extract_tarfile(path, dest, raw, year, month):
 		file.extractall(path + dest + year + "/")
 		file.close()
 
+def get_location_string(bs_article):
+		bs_location = bs_article.find_all("location")
+		locs = ""
+		for loc in bs_article.find_all("location"):
+			locs = locs + "-" + loc.string
+		return locs
+
 def article_to_datarow(path_to_article, relevant_countries_list):
 	# High level function that reads an article, 
 	# Determines whether the location is relevant
 	# If the location is relevant, it builds features for the article
+
 	with open(path_to_article, 'r', encoding="utf8") as f:
 		data = f.read()
 		f.close()
 
 	bs_article = BeautifulSoup(data, "xml")
 	
+	bs_locations = get_location_string(bs_article)
 
-	bs_location = bs_article.find_all("location")
+	pathindex = [path_to_article.replace(os.getcwd(), ""), bs_locations]
 
-	if not relevant_location(bs_location, relevant_countries_list):
-		return # Return nothing in this case
+	if not relevant_location(bs_locations, relevant_countries_list):
+		return {"datarow": None, "pathindex": pathindex}
 	datarow = build_features(bs_article)
-
-	return datarow
+#	ipdb.set_trace()
+	return {"datarow": datarow, "pathindex": pathindex}
 
 def relevant_location(article_locations, relevant_countries_list):
 	# Determines whether the location attribute of an article is relevant to our use case
 	
-	locations = []
+	#locations = []
 
-	for location in article_locations:
-		locations.append(location.string)
+	#for location in article_locations:
+	#	locations.append(location.string)
+
+	locations = article_locations.split("-")
 
 	# Match against country list to determine if relevant
 	if set(locations).isdisjoint(relevant_countries_list):
@@ -138,11 +158,7 @@ def build_features(bs_article):
 	# Article id
 	id_str = bs_article.find("doc-id").get("id-string")
 	# Country	
-	locations = bs_article.find_all("location")
-	locs = ""
-	for loc in bs_article.find_all("location"):
-		locs = locs + "-" + loc.string
-
+	locs = get_location_string(bs_article) # TODO: this is actually redundant
 	# Date
 	pubdata = bs_article.find(name="pubdata")
 	date = pubdata.get("date.publication")
@@ -179,12 +195,26 @@ def build_features(bs_article):
 
 	return(observation)		
 
-def write_list_to_table(obs_list, write_to_file):
+def write_list_to_table(l, write_to_file):
 
-	field_names = [*obs_list[0]]
+	field_names = [*l[0]]
+	
 	with open(write_to_file, 'w') as csvfile:
-		writer = csv.DictWriter(csvfile, fieldnames=field_names)
+		writer = csv.writer(csvfile)
+		writer.writerow(field_names)
+		writer.writerows(l)
+		csvfile.close()
+	return
+
+def write_dict_to_table(d, write_to_file):
+
+	field_names = [*d[0]]
+	# Unique key values in all diciotnaries:
+	field_names = list(set( val for dic in d for val in dic.keys()))
+	
+	with open(write_to_file, 'w') as csvfile:
+		writer = csv.DictWriter(csvfile, fieldnames = field_names)
 		writer.writeheader()
-		writer.writerows(obs_list)
+		writer.writerows(d)
 		csvfile.close()
 	return

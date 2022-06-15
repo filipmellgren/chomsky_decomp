@@ -22,6 +22,7 @@ import csv
 from multiprocessing import Pool, cpu_count
 from functools import partial
 import ipdb
+import pandas as pd
 
 def parse_data():
 	# Main logic for parsing data. 
@@ -54,14 +55,14 @@ def parse_data():
 
 	# TODO: check from an index containing path and a countrylist
 	if os.path.exists(pathindex_file): # If a path to files has already been created
-		path_file = open(pathindex_file, "r")
-		with open(pathindex_file, newline='') as csvfile:
-			datapaths = csv.reader(csvfile, delimiter=',')
-
-		datapaths = path_file.read().split(",")
-		print(datapaths) # TODO: filter away those with irrelevant locations
-		path_file.close()
-
+		datapaths_pd = pd.read_csv(pathindex_file)
+		datapaths_pd.columns = ['path', 'locations']
+		# TODO filter away those with irrelevant locations
+		# TODO: query might work
+		# if any("abc" in s for s in countries):
+		datapaths_pd = datapaths_pd.dropna() # Quick way to do some filtration on paths (drop all with no location)
+		datapaths_pd = datapaths_pd.assign(path=lambda x: os.getcwd() + x.path)
+		datapaths = list(datapaths_pd["path"])
 	else: # Otherwise go through all files
 		for root, dirs, files in os.walk(PATH + 'extracted/'):
 			for file in files:
@@ -208,7 +209,6 @@ def write_list_to_table(l, write_to_file):
 
 def write_dict_to_table(d, write_to_file):
 
-	field_names = [*d[0]]
 	# Unique key values in all diciotnaries:
 	field_names = list(set( val for dic in d for val in dic.keys()))
 	

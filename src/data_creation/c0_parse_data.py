@@ -35,8 +35,8 @@ def parse_data():
 	DEST = 'extracted/'
 	
 	countries = read_params("parameters/countries.csv")
-	years = read_params("parameters/years_lite.csv")
-	months = read_params("parameters/months_lite.csv")
+	years = read_params("parameters/years.csv")
+	months = read_params("parameters/months.csv")
 	
 	prepare_tarfiles(years, months, data_path, DEST, RAW)
 
@@ -45,7 +45,7 @@ def parse_data():
 	datapaths = get_paths(pathindex_file, data_path)
 	
 	# Parallel processing over datapaths
-	pool = Pool(cpu_count()-1)
+	pool = Pool(cpu_count())
 	obs_dict_list = pool.starmap(article_to_datarow, zip(datapaths, repeat(countries)))
 
 	datarows = [d['datarow'] for d in obs_dict_list]
@@ -53,7 +53,7 @@ def parse_data():
 
 	create_path_index(pathindex_file, obs_dict_list) 
 
-	write_to_file = "data/analysis/test.csv"
+	write_to_file = "data/analysis/pilotstudy.csv"
 	write_dict_to_table(datarows, write_to_file)
 
 	return
@@ -74,7 +74,7 @@ def get_paths(pathindex_file, data_path):
 		# TODO: We can change behavior so it only returns relevant paths, depending on year and month.
 
 	if os.path.exists(pathindex_file): # If a path to files has already been created
-		datapaths_pd = pd.read_csv(pathindex_file)
+		datapaths_pd = pd.read_csv(pathindex_file, encoding='latin-1')
 		datapaths_pd.columns = ['path', 'locations']
 		# TODO filter away those with irrelevant locations 
 		# TODO: query might work
@@ -121,8 +121,11 @@ def extract_tarfile(path, dest, raw, year, month):
 def get_location_string(bs_article):
 		bs_location = bs_article.find_all("location")
 		locs = ""
-		for loc in bs_article.find_all("location"):
-			locs = locs + "-" + loc.string
+		for loc in bs_location:
+			try:
+				locs = locs + "-" + loc.string
+			except TypeError: # maybe: locs = locs + '-' instead
+				pass;
 		return locs
 
 def article_to_datarow(path_to_article, relevant_countries_list):
@@ -214,7 +217,7 @@ def write_list_to_table(l, write_to_file):
 
 	field_names = [*l[0]]
 	
-	with open(write_to_file, 'w') as csvfile:
+	with open(write_to_file, 'w', encoding="utf-8") as csvfile:
 		writer = csv.writer(csvfile)
 		writer.writerow(field_names)
 		writer.writerows(l)

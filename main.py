@@ -9,7 +9,7 @@ if __name__ == "__main__":
 
 	# Parameters ####
 	# Note, parameters related to what NYT data to screen is defined in parameters/
-	ANALYTICS_FILE = '/data/analysis/blaj2.csv' # filename containing cleaned data.
+	ANALYTICS_FILE = '/data/analysis/pilotstudy.csv' # filename containing cleaned data.
 	host = os.getlogin()
 	
 	# Load data and store more conveniently
@@ -26,6 +26,5 @@ if __name__ == "__main__":
 		# Conditional to avoid some system error. 
 		os.system("pdflatex docs/paper.tex")
 		os.system("mv paper.* docs")
-
 	print("DONE!")
 

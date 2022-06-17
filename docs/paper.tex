@@ -1,6 +1,6 @@
-\input{docs/prelude}
+\input{prelude}
 
-\title{Chomsky decomposition}
+\title{Manufacturing Consent in the 21st Century?}
 \author{
 	Mellgren, Filip\\
 	\texttt{filip.mellgren@su.se}
@@ -18,7 +18,46 @@
 	
 	%\newpage
 	%\bibliography{references.bib}
-	\section{Test}
-	\includegraphics[scale=0.5]{output/plots/test.png}
+	\section{Introduction}	
+	This paper seeks to answer the question: Is US Mainstream Media coverage of foreign affairs biased toward the interests of the US White House? To do this, we need to define,  first, what we mean by interest of the US White House and, secondly, what we mean by the US Mainstream Media. 
+	
+	Firstly, inspired by Chomsky \& Herman's \textit{Manufacturing Consent: The Political Economy of the Mass Media} (1988),  we proxy the interests of the White House by categorizing every country in the world as either an enemy- or a client state. A client state is a state actor that has good diplomatic and economic relations with the USA; an enemy state is a state actor where this is not the case. The precise definition of this category is central to the project and will therefore be sharpened significantly, but for now an intuitive outline will do.
+	
+	Secondly,  the US Mainstream Media is, for now,  proxied by the New York Times. The New York Times is deemed The Paper of Record and is the most influential news media in the world. As such, its coverage is fairly representative of the coverage provided by the other big news outlets such as The Washington Post, Wall Street Journal, Newsweek, etc. 
+	
+	With these definitions in mind, we apply a range of methods to a data set consisting of the complete corpus of New York Times articles covering the period 1987 to 2007. First, we categorize countries as either client- or enemy states. We then quantify whether and to what extent the quantity of coverage is affected by this categorization, by counting column inches and the number of articles written over time. 
+	This quantity indicates how important a topic is deemed by the NYT. Furthermore, if the Chomsky \& Herman thesis is correct, the amount of coverage - combined with our knowledge of a country's category - can be used to determine if events and facts that run counter to the interests of the White House are suppressed., and vice versa  To see this, suppose, for example, that an atrocity happens in a client country and that making the information about this event public is inconvenient to the White House. One way to reduce the negative impact of the atrocity on the White House would be to reduce reporting on this topic. Similarly, if an atrocity happens in an enemy state and making that information public would benefit the White House, maximizing the impact of this event would be to increase reporting on the topic. Such differences in the amount of reporting would, ideally, show up in this part of the analysis. 
+	
+	The quantity of coverage is just one relevant dimension of analysis, however. If a story is printed, where and how it is presented is also a potential indicator of bias. We measure where a story is printed by noting the page at which a story is placed, using the logic that the further toward the front-page a story is placed, the more important the story is deemed to be by the NYT. Furthermore, to measure how a story is framed, we use machine learning tools to do sentiment analysis on the text of the story. If a story is deemed important, one way to draw more attention to the story is to use more emotive language. If the use of emotive language differs across categorizations, this is a further potential indicator of bias.
+	
+	The paper proceeds as follows.  Section 2 describes the data. Section 3 presents descriptive statistics based on the raw data. Section 4 identifies instances of variation in the category of a country and investigates whether this variation induces a change in the coverage along the relevant dimensions. Section 5 concludes. 
+	
+	\section{Data}
+	We use the New York Time Annotated Corpus (Penn LDC2008T19,  2008).
+	
+	Here it would be good with a break down of the data, how it is structured,  etc.
+	
+	\section{Categorization: Client and Enemy States}
+	In this section, we present the criterion for being a client or an enemy state. The degree of diplomatic and economic relations is likely a spectrum, i.e. Israel is probably a closer ally than Finland, but we will only employ a binary category. This is not an issue, because we are interested in comparing extreme cases mostly, that is, the states of interest are either clearly a client state (e.g. Israel or Saudi Arabia) or an enemy state (e.g.Russia or Iran). 
+	
+	
+	
+	
+	\section{Descriptive Statistics}
+	To get a sense of the data and how it interacts with the categorization, we present graphs of time along the x-axis along with an indication of the category the country or countries belong to, and different variables of interest along the y-axis. 
+	
+	The first set of graphs focus on four countries: Israel (client), Saudi Arabia (client),  Iran (enemy), Russia (enemy). We will present separate graphs for each variable of interest. 
+	The first variable of interest is is total number of words per month.
+	The second variable of interest is total number of words per month, by desk. 
+	The third variable of interest is 1 divided by the average page number that the article is printed on,  i.e. the larger the value the closer to the front page is the average article. 
+	The fourth variable of interest is 1 divided by the average page number that the article is printed on,  by desk. 
+	
+	\section{Variation in Category: Russia, Jeltsin and Clinton}
+	Boris Jeltsin is elected President of Russia on July 10, 1991 and is in power until December 31 1999.  Arguably, Russia moves from being an enemy state to being a client state to being an enemy during the period we have data. As a first approximation, let's assume that Russia is an enemy state from January 1 1987 to July 9 1991 after which it becomes a client state and stays that way until December 31,  after which it reverts to being an enemy state with the election of Vladimir Putin. 
+	
+	We focus on the First Chechen War from December 1994 to August 1996,  during which Russia is a client state. 
+	
+	
+	\section{Conclusion}
 	
 \end{document}
